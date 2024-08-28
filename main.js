@@ -10,4 +10,3 @@ close_menu_button.addEventListener("click", () => {
     menu_wrapper.style.display = "none"
 })
 
-

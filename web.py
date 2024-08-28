@@ -1,7 +1,7 @@
 import os
 import uuid
 import datetime
-from flask import Flask, render_template_string, request, send_from_directory, redirect, url_for, session
+from flask import Flask, render_template_string, request, send_from_directory, redirect, url_for, session, jsonify
 from threading import Thread
 import shutil
 from test import (
@@ -13,6 +13,9 @@ from test import (
 from pathlib import Path
 import pysrt
 import logging
+import os
+import shutil
+from pathlib import Path
 
 
 MAE_THRESHOLD: float = 3.0
@@ -36,13 +39,11 @@ def index():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="statics/styles/optimization.css">
     <title>Optimization</title>
 </head>
-
 <body>
 <div class="root">
     <header>
@@ -53,7 +54,7 @@ def index():
         <div class="menu">
             <ul>
                 <li class="name">Olivia Rhye</li>
-                <li class="email">olivia @example.com</li>
+                <li class="email">olivia@example.com</li>
                 <li>View profile</li>
                 <li>Credit left <span>50</span></li>
                 <li>Setting</li>
@@ -63,44 +64,44 @@ def index():
         <div class="wrapper">
             <div class="control_panel">
                 <div class="control">
-                   <div class="block_a">
-                       <h1>Scene Optimization Bot</h1>
-                       <div class="upload">
-                           <div class="upload_file_wrapper">
-                               <span>Upload your video:</span>
-                               <label for="video">
+                    <div class="block_a">
+                        <h1>Scene Optimization Bot</h1>
+                        <div class="upload">
+                            <div class="upload_file_wrapper">
+                                <span>Upload your video:</span>
+                                <label for="video">
                                     <span class="button">
                                         <img src="statics/assets/upload.svg" alt="upload">
                                         Choose file
                                     </span>
-                                   <span class="selected_file selected_video">No file chosen</span>
-                               </label>
-                               <input id="video" type="file" accept="video/mp4,video/x-m4v,video/*">
-                           </div>
-                           <div class="upload_file_wrapper">
-                               <span>Video’s MP3 File:</span>
-                               <label for="mp3">
+                                    <span class="selected_file selected_video">No file chosen</span>
+                                </label>
+                                <input id="video" type="file" accept="video/mp4,video/x-m4v,video/*">
+                            </div>
+                            <div class="upload_file_wrapper">
+                                <span>Video’s MP3 File:</span>
+                                <label for="mp3">
                                     <span class="button">
                                         <img src="statics/assets/upload.svg" alt="upload">
                                         Choose file
                                     </span>
-                                   <span class="selected_file selected_mp3">No file chosen</span>
-                               </label>
-                               <input id="mp3" type="file" accept="audio/mp3">
-                           </div>
-                           <div class="upload_file_wrapper">
-                               <span>Video’s transcribed Text File:</span>
-                               <label for="transcribed">
+                                    <span class="selected_file selected_mp3">No file chosen</span>
+                                </label>
+                                <input id="mp3" type="file" accept="audio/mp3">
+                            </div>
+                            <div class="upload_file_wrapper">
+                                <span>Video’s transcribed Text File:</span>
+                                <label for="transcribed">
                                     <span class="button">
                                         <img src="statics/assets/upload.svg" alt="upload">
                                         Choose file
                                     </span>
-                                   <span class="selected_file selected_transcribe">No file chosen</span>
-                               </label>
-                               <input id="transcribed" type="file" accept=".csv, .txt">
-                           </div>
-                       </div>
-                   </div>
+                                    <span class="selected_file selected_transcribe">No file chosen</span>
+                                </label>
+                                <input id="transcribed" type="file" accept=".csv, .txt">
+                            </div>
+                        </div>
+                    </div>
                     <div class="block_b">
                         <h1>Subtitle Design</h1>
                         <div class="font">
@@ -130,32 +131,29 @@ def index():
                                     <span class="subtitles-background-color-value">#ffffff</span>
                                 </div>
                             </div>
-
                         </div>
                     </div>
-                        <div class="slider-container">
-                            <label for="fontSize">Font Size: <span class="slider-value">20</span></label>
-                            <input type="range" id="fontSize" min="10" max="30" value="20" class="slider">
-                        </div>
-                    <button>Process</button>
+                    <div class="slider-container">
+                        <label for="fontSize">Font Size: <span class="slider-value">20</span></label>
+                        <input type="range" id="fontSize" min="10" max="30" value="20" class="slider">
+                    </div>
+                    <button id="processButton">Process</button>
                 </div>
             </div>
-            <div class="display">
-                <h1 class="preview">Preview</h1>
-                <div class="block">
-                    <p>
-                        Your New Scene Will Go Here
-                    </p>
-                    <div class="subtitle_text">
-                            <span>
-                                This Is How Your Original Subtitle <br> Text Will Be Displayed
-                            </span>
+            <div class="display-wrapper">
+                <div class="display">
+                    <h1 class="preview">Preview</h1>
+                    <div class="block">
+                        <p>Your New Scene Will Go Here</p>
+                        <div class="subtitle_text">
+                            <span>This Is How Your Original Subtitle <br> Text Will Be Displayed</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="display">
-                <h1 class="tutorial">Tutorial</h1>
-                <div class="block"></div>
+                <div class="display">
+                    <h1 class="tutorial">Tutorial</h1>
+                    <div class="block"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -163,7 +161,132 @@ def index():
 <script src="statics/js/optimization.js"></script>
 </body>
 </html>
+
     ''')
+
+
+
+# @app.route('/process', methods=['POST'])
+# def process():
+#     global global_font_size, global_box_color, global_bg_color, global_margin
+#     global global_font_file_path
+    
+#     static_out_file_server = os.path.join('static', 'output_root')
+#     tmp = os.path.join(os.getcwd(), 'tmp')
+#     final_out_path = os.path.join('static', 'output_root', 'final')
+#     outpath = os.path.join(static_out_file_server, 'output')
+    
+#     try:
+#         # Cleanup old files
+#         remove_all_files_in_directory(os.path.join(outpath, 'videos'))
+#         remove_all_files_in_directory(os.path.join(outpath, 'audios'))
+#         remove_all_files_in_directory(final_out_path)
+        
+#         if os.path.exists(tmp):
+#             tmp_dirs = os.listdir(tmp)
+#             for dir in tmp_dirs:
+#                 remove_all_files_in_directory(os.path.join(tmp, dir))
+#             remove_all_files_in_directory(tmp)
+#     except Exception as e:
+#         return f"An error occurred during cleanup: {e}", 500
+    
+#     try:
+#         # Create necessary directories
+#         os.makedirs(outpath, exist_ok=True)
+#         os.makedirs(os.path.join(outpath, 'audios'), exist_ok=True)
+#         os.makedirs(os.path.join(outpath, 'videos'), exist_ok=True)
+#         os.makedirs(final_out_path, exist_ok=True)
+#         os.makedirs(tmp, exist_ok=True)  # Ensure the tmp directory exists
+#     except Exception as e:
+#         return f"An error occurred during directory creation: {e}", 500
+    
+#     unique_special_id = os.path.join(tmp, generate_unique_id())
+    
+#     video_dir = os.path.join(unique_special_id, "video")
+#     clips_dir = os.path.join(unique_special_id, "clips")
+#     mp3_dir = os.path.join(unique_special_id, "mp3")
+#     text_dir = os.path.join(unique_special_id, "text")
+#     font_dir = os.path.join(unique_special_id, "font")
+#     os.makedirs(video_dir, exist_ok=True)
+#     os.makedirs(clips_dir, exist_ok=True)
+#     os.makedirs(mp3_dir, exist_ok=True)
+#     os.makedirs(text_dir, exist_ok=True)
+#     os.makedirs(font_dir, exist_ok=True)
+
+#     try:
+#         # Save uploaded files
+#         video_file = request.files.get('video_file')
+#         mp3_file = request.files.get('mp3_file')
+#         text_file = request.files.get('text_file')
+#         font_file = request.files.get('font_file')
+        
+#         # Debug print to check if files were uploaded
+#         print(f"[DEBUG] Video File: {video_file}", flush=True)
+#         print(f"[DEBUG] MP3 File: {mp3_file}", flush=True)
+#         print(f"[DEBUG] Text File: {text_file}", flush=True)
+#         print(f"[DEBUG] Font File: {font_file}", flush=True)
+
+#         if not video_file or not mp3_file or not text_file or not font_file:
+#             return "Missing required files", 400
+
+#         video_file_path = os.path.join(video_dir, video_file.filename)
+#         mp3_file_path = os.path.join(mp3_dir, mp3_file.filename)
+#         text_file_path = os.path.join(text_dir, text_file.filename)
+#         font_file_path = os.path.join(font_dir, font_file.filename)
+        
+#         video_file.save(video_file_path)
+#         mp3_file.save(mp3_file_path)
+#         text_file.save(text_file_path)
+#         font_file.save(font_file_path)
+        
+        
+#         # Debug print to confirm files have been saved
+#         print(f"[DEBUG] Video File Saved: {video_file_path}", flush=True)
+#         print(f"[DEBUG] MP3 File Saved: {mp3_file_path}", flush=True)
+#         print(f"[DEBUG] Text File Saved: {text_file_path}", flush=True)
+#         print(f"[DEBUG] Font File Saved: {font_file_path}", flush=True)
+
+
+#     except Exception as e:
+#         print(f"[ERROR] Failed to save files: {e}", flush=True)
+#         return f"An error occurred while saving files: {e}", 500
+    
+    
+#     # New parameters
+#     global_font_size = int(request.form.get('font_size'))
+#     global_box_color = str(request.form.get('font_color'))
+#     global_bg_color = str(request.form.get('bg_color'))
+#     global_margin = int(request.form.get('margin', 26)) 
+#     global_font_file_path = font_file_path
+    
+#     print(f"[DEBUG] Font Size: {global_font_size}", flush=True)
+#     print(f"[DEBUG] Box Color: {global_box_color}", flush=True)
+#     print(f"[DEBUG] Background Color: {global_bg_color}", flush=True)
+#     print(f"[DEBUG] Margin: {global_margin}", flush=True)
+
+#     if not global_font_size or not global_box_color or not global_bg_color:
+#         return "Missing required form data", 400
+
+#     # Generate the SRT file from TXT and MP3 files
+#     try:
+#         srt_file = generate_srt_from_txt_and_audio(Path(text_file_path), Path(mp3_file_path), Path(tmp))
+#     except Exception as e:
+#         return f"Failed to generate SRT file: {e}", 500
+    
+#     # final_font_path = os.path.join('uploads', 'final_font_file.ttf')
+#     # shutil.move(font_file_path, final_font_path)
+
+
+#     # Move the SRT file to uploads directory for further processing
+#     final_srt_path = os.path.join('uploads', 'original_subtitles.srt')
+#     shutil.move(srt_file, final_srt_path)
+    
+#     # Move the video file to uploads directory for further processing
+#     final_video_path = os.path.join('uploads', 'original_video.mp4')
+#     shutil.move(video_file_path, final_video_path)
+    
+#     return redirect(url_for('video_processing_page'))
+
 
 
 
@@ -189,7 +312,7 @@ def process():
                 remove_all_files_in_directory(os.path.join(tmp, dir))
             remove_all_files_in_directory(tmp)
     except Exception as e:
-        return f"An error occurred during cleanup: {e}", 500
+        return jsonify({'status': 'error', 'message': f'An error occurred during cleanup: {e}'}), 500
     
     try:
         # Create necessary directories
@@ -199,7 +322,7 @@ def process():
         os.makedirs(final_out_path, exist_ok=True)
         os.makedirs(tmp, exist_ok=True)  # Ensure the tmp directory exists
     except Exception as e:
-        return f"An error occurred during directory creation: {e}", 500
+        return jsonify({'status': 'error', 'message': f'An error occurred during directory creation: {e}'}), 500
     
     unique_special_id = os.path.join(tmp, generate_unique_id())
     
@@ -228,7 +351,7 @@ def process():
         print(f"[DEBUG] Font File: {font_file}", flush=True)
 
         if not video_file or not mp3_file or not text_file or not font_file:
-            return "Missing required files", 400
+            return jsonify({'status': 'error', 'message': 'Missing required files'}), 400
 
         video_file_path = os.path.join(video_dir, video_file.filename)
         mp3_file_path = os.path.join(mp3_dir, mp3_file.filename)
@@ -240,21 +363,18 @@ def process():
         text_file.save(text_file_path)
         font_file.save(font_file_path)
         
-        
         # Debug print to confirm files have been saved
         print(f"[DEBUG] Video File Saved: {video_file_path}", flush=True)
         print(f"[DEBUG] MP3 File Saved: {mp3_file_path}", flush=True)
         print(f"[DEBUG] Text File Saved: {text_file_path}", flush=True)
         print(f"[DEBUG] Font File Saved: {font_file_path}", flush=True)
 
-
     except Exception as e:
         print(f"[ERROR] Failed to save files: {e}", flush=True)
-        return f"An error occurred while saving files: {e}", 500
-    
+        return jsonify({'status': 'error', 'message': f'An error occurred while saving files: {e}'}), 500
     
     # New parameters
-    global_font_size = int(request.form.get('font_size'))
+    global_font_size = int(request.form.get('font_size', 20))
     global_box_color = str(request.form.get('font_color'))
     global_bg_color = str(request.form.get('bg_color'))
     global_margin = int(request.form.get('margin', 26)) 
@@ -266,18 +386,14 @@ def process():
     print(f"[DEBUG] Margin: {global_margin}", flush=True)
 
     if not global_font_size or not global_box_color or not global_bg_color:
-        return "Missing required form data", 400
+        return jsonify({'status': 'error', 'message': 'Missing required form data'}), 400
 
     # Generate the SRT file from TXT and MP3 files
     try:
         srt_file = generate_srt_from_txt_and_audio(Path(text_file_path), Path(mp3_file_path), Path(tmp))
     except Exception as e:
-        return f"Failed to generate SRT file: {e}", 500
+        return jsonify({'status': 'error', 'message': f'Failed to generate SRT file: {e}'}), 500
     
-    # final_font_path = os.path.join('uploads', 'final_font_file.ttf')
-    # shutil.move(font_file_path, final_font_path)
-
-
     # Move the SRT file to uploads directory for further processing
     final_srt_path = os.path.join('uploads', 'original_subtitles.srt')
     shutil.move(srt_file, final_srt_path)
@@ -286,7 +402,10 @@ def process():
     final_video_path = os.path.join('uploads', 'original_video.mp4')
     shutil.move(video_file_path, final_video_path)
     
-    return redirect(url_for('video_processing_page'))
+    # Return JSON response with success message
+    return jsonify({'status': 'success', 'message': 'Files processed successfully', 'redirect': url_for('video_processing_page')})
+
+
 
 @app.route('/video_processing')
 def video_processing_page():

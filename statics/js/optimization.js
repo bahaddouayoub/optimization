@@ -75,3 +75,81 @@ user.addEventListener( "click", function () {
         menu.style.display = "block"
     }
 } );
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const videoInput = document.getElementById('video');
+    const mp3Input = document.getElementById('mp3');
+    const transcribedInput = document.getElementById('transcribed');
+    const fontInput = document.getElementById('font');
+    const fontColorInput = document.getElementById('fontColor');
+    const subtitlesBackgroundInput = document.getElementById('subtitles-background');
+    const fontSizeInput = document.getElementById('fontSize');
+    const processButton = document.getElementById('processButton');
+
+    const updateFileLabel = (input, label) => {
+        const fileName = input.files.length > 0 ? input.files[0].name : 'No file chosen';
+        label.textContent = fileName;
+    };
+
+    videoInput.addEventListener('change', () => updateFileLabel(videoInput, document.querySelector('.selected_video')));
+    mp3Input.addEventListener('change', () => updateFileLabel(mp3Input, document.querySelector('.selected_mp3')));
+    transcribedInput.addEventListener('change', () => updateFileLabel(transcribedInput, document.querySelector('.selected_transcribe')));
+    fontInput.addEventListener('change', () => updateFileLabel(fontInput, document.querySelector('.selected_font')));
+
+    fontSizeInput.addEventListener('input', (e) => {
+        document.querySelector('.slider-value').textContent = e.target.value;
+    });
+
+    processButton.addEventListener('click', () => {
+        const formData = new FormData();
+        formData.append('video_file', videoInput.files[0]);
+        formData.append('mp3_file', mp3Input.files[0]);
+        formData.append('text_file', transcribedInput.files[0]);
+        formData.append('font_file', fontInput.files[0]);
+        formData.append('font_size', fontSizeInput.value);
+        formData.append('font_color', fontColorInput.value);
+        formData.append('bg_color', subtitlesBackgroundInput.value);
+
+        fetch('/process', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            // Update the preview or display success message
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    });
+});
+
+
+
+// // scripts.js
+// document.addEventListener('DOMContentLoaded', function() {
+//     document.getElementById('processButton').addEventListener('click', function() {
+//       // Create a FormData object to handle form data if needed
+//       var formData = new FormData();
+  
+//       // Optionally, you can append form data here
+//       // Example: formData.append('fontSize', document.getElementById('fontSize').value);
+  
+//       fetch('/process', {
+//         method: 'POST',
+//         body: formData
+//       })
+//       .then(response => response.json())
+//       .then(data => {
+//         // Handle the response data
+//         console.log('Success:', data);
+//         // You can update the page or provide feedback to the user here
+//       })
+//       .catch(error => {
+//         console.error('Error:', error);
+//       });
+//     });
+//   });
+  
